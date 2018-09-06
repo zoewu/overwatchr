@@ -1,0 +1,31 @@
+---
+title: "Overwatch Player Statistics - Inauguration Season"
+author: "Zoe"
+date: "September 5, 2018"
+output: html_document
+---
+
+
+
+```{r setup, include=FALSE,message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(jsonlite)
+library(DT)
+```
+
+## Player Statistics Table
+```{r stats_player ,cache=TRUE,echo=FALSE}
+root = "https://api.overwatchleague.com/stats"
+stat = "players"
+path = paste(root,stat,sep = "/")
+flatJSON <- fromJSON(path)
+data <- flatJSON$data
+name_list <- names(data)
+names(data) <- stringi::stri_trans_totitle(gsub("_"," ",name_list))
+data[,-c(1,2)] %>%
+  datatable(options = list(pageLength = 15),
+            filter="top")%>%
+  formatRound(columns=names(data)[-c(1,2)], digits=0)
+
+```
+
