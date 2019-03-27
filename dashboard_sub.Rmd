@@ -1,0 +1,64 @@
+`r paste0('#', heroes, '{data-navmenu="Heroes"}')`
+
+Row {data-height=550}
+-----------------------------------------------------------------------
+
+`r paste("###",stri_trans_totitle(heroes),": K/D Average Per 10 Min (Play Time >",    round(play_time_min/60),"Min)")`
+
+
+```{r}
+sub1 <- subpage_data$data()[Stats_name=="eliminations_avg_per_1m"]
+sub2 <- subpage_data$data()[Stats_name=="deaths_avg_per_1m"]
+setkey(sub1,Player)
+setkey(sub2,Player)
+sub12 <- sub2[sub1]
+sp1 <- plot_ly(data = sub12, x = ~Value, y = ~i.Value, color = ~Team, colors=color_str,
+               hoverinfo = 'text',
+               text = ~paste('</br> Player: ', Player,
+                      '</br> Team: ', Team,
+                      '</br> Elimination: ', round(i.Value,2),
+                      '</br> Deaths: ', round(Value,2),
+                      '</br> K/D: ', round(i.Value/Value,2)
+                      )) %>% 
+    add_markers() %>%
+   add_text(text=~Player,textposition = "bottom right") %>%
+  config(displayModeBar = F) %>%
+  layout(xaxis = list(title="Deaths/10 Min"), yaxis = list(title="Eliminations/10 Min"),showlegend = FALSE)
+
+sp1
+
+```
+
+### Chart C
+
+```{r}
+library(DT)
+
+datatable(sub_DT, rownames = FALSE,filter = list(position = 'top', clear = TRUE, plain = FALSE))
+```
+
+Row {data-height=450}
+-----------------------------------------------------------------------
+
+`r paste("###",stri_trans_totitle(heroes),": Stats Average Per 10 Min (Play Time >",    round(play_time_min/60),"Min)")`
+
+```{r fig.width=20,out.width = "100%",out.height="100%"}
+p <- ggplot(subpage_data,
+            aes(x = Rank, y =  Value, fill = Team))+
+  geom_col()+
+  scale_y_continuous(expand = c(0,0),label=comma)+
+  scale_x_discrete(labels=subpage_data$data()[, setNames(as.character(Player), Rank)])+
+  xlab("")+ylab("")+
+  facet_wrap(~Stats_name_formatted,scales="free",drop=T,nrow=1)+
+  scale_fill_manual(values=color_str)+
+  theme_minimal()+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1,size=7), legend.title = element_blank(),
+        axis.text.y=element_text(size = 8),
+        panel.grid.major.x=element_blank(),panel.grid.minor=element_blank(),
+        panel.spacing.x = unit(0, "lines"))
+
+sp <- ggplotly(p) %>% config(displayModeBar = F) %>% layout(autosize = T)
+
+sp
+```
+
