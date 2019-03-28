@@ -3,7 +3,7 @@
     } else {if (heroes %in% healer_heroes) {paste0('#', stri_trans_totitle(heroes), '{data-navmenu="Support"}') 
     } else {paste0('#', stri_trans_totitle(heroes),'{data-navmenu="Damage"}')}}`
 
-Row {data-height=550}
+Row {data-height=550,data-width=450}
 -----------------------------------------------------------------------
 
 `r paste("###",stri_trans_totitle(heroes),": K/D Average Per 10 Min (Play Time >",    round(play_time_min/60),"Min)")`
@@ -57,18 +57,26 @@ sub_DT <- SharedData$new(sub_datetable
 
 
 
-datatable(sub_DT, rownames = FALSE,extensions = c('FixedColumns','FixedHeader'),
-          options=list(dom='t',scrollX=F,fixedHead=T,deferRender=T,
-                                                scrollY=500,scroller=T,autoWidth = TRUE,
-                                                columnDefs=list(list(width="15px",targets="_all")),
-                                                fixedColumns = TRUE,
+dt1 <- datatable(sub_DT, 
+          rownames = FALSE,
+          class = 'compact order-column hover ',
+          extensions = 'Scroller',
+          options=list(dom='t',scrollX=F,
+                       deferRender=T,
+                       scrollY=500,
+                       scroller=T,
+                       autoWidth = TRUE,
                        initComplete = JS(
     "function(settings, json) {",
-    "$('body').css({'font-family': 'Arial'});",
+    "$('body').css({'font-family': 'Arial',
+    'font-size': '15px'});",
     "}")
                                                 ))%>% 
-  formatRound(c("Deaths","Eliminations","Final Blows","Ultimates Earned","K/D"),2)%>%
-  formatCurrency(ifelse(heroes %in% healer_heroes,c("Hero Damage","Healing"),"Hero Damage"),currency="",digits=0)
+  formatRound(c("Deaths","Eliminations","Final Blows","Ultimates Earned","K/D"),2)
+
+if (heroes %in% healer_heroes) {dt1 %>% formatCurrency(c("Hero Damage","Healing"),currency="",digits=0)
+  } else { dt1 %>% formatCurrency(c("Hero Damage"),currency="",digits=0)}
+ 
 ```
 
 Row {data-height=450}
