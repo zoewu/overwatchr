@@ -1,4 +1,7 @@
-`r paste0('#', heroes, '{data-navmenu="Heroes"}')`
+`r if (heroes %in% tank_heroes) {
+    paste0('#', stri_trans_totitle(heroes), '{data-navmenu="Tank"}')
+    } else {if (heroes %in% healer_heroes) {paste0('#', stri_trans_totitle(heroes), '{data-navmenu="Support"}') 
+    } else {paste0('#', stri_trans_totitle(heroes),'{data-navmenu="Damage"}')}}`
 
 Row {data-height=550}
 -----------------------------------------------------------------------
@@ -12,29 +15,60 @@ sub2 <- subpage_data$data()[Stats_name=="deaths_avg_per_1m"]
 setkey(sub1,Player)
 setkey(sub2,Player)
 sub12 <- sub2[sub1]
-sp1 <- plot_ly(data = sub12, x = ~Value, y = ~i.Value, color = ~Team, colors=color_str,
+share12 <- SharedData$new(sub12,~Player,group="hero_stats_subset")
+
+sp1 <- plot_ly(share12, x = ~Value, y = ~i.Value, color = ~Team, colors=color_str,
                hoverinfo = 'text',
-               text = ~paste('</br> Player: ', Player,
-                      '</br> Team: ', Team,
+               text = ~paste('</br> ', Player,
+                      '-', Team,
                       '</br> Elimination: ', round(i.Value,2),
                       '</br> Deaths: ', round(Value,2),
-                      '</br> K/D: ', round(i.Value/Value,2)
+                      '</br> K/D: ', round(i.Value/Value,2),
+                      '( Rank ', frankv(-i.Value/Value),')'
                       )) %>% 
     add_markers() %>%
    add_text(text=~Player,textposition = "bottom right") %>%
   config(displayModeBar = F) %>%
-  layout(xaxis = list(title="Deaths/10 Min"), yaxis = list(title="Eliminations/10 Min"),showlegend = FALSE)
+  layout(xaxis = list(title="Deaths/10 Min"), yaxis = list(title="Eliminations/10 Min"),showlegend = FALSE)%>%
+  highlight(opacityDim=1,off="plotly_doubleclick",
+             selected = attrs_selected(marker=list(size=10,line = list(
+          color = "#999",
+          width = 3,
+          opancity = 0.1
+        ))))
+  
 
 sp1
 
 ```
 
-### Chart C
+`r paste("###",stri_trans_totitle(heroes),": Player Overall Statistics (Play Time >",    round(play_time_min/60),"Min)")`
 
 ```{r}
 library(DT)
 
-datatable(sub_DT, rownames = FALSE,filter = list(position = 'top', clear = TRUE, plain = FALSE))
+sub_datetable <- dcast(subpage_data$data()
+                               [,c("Player","Team","Stats_name_formatted","Value")],
+                               Player+Team~str_split(Stats_name_formatted,pattern = "/",simplify=T)[,1],value.var="Value")[,"K/D":=Eliminations/Deaths]
+
+if (!heroes %in% healer_heroes)  sub_datetable[,Healing:=NULL]
+sub_DT <- SharedData$new(sub_datetable
+                         ,~Player,group="hero_stats_subset")
+
+
+
+datatable(sub_DT, rownames = FALSE,extensions = c('FixedColumns','FixedHeader'),
+          options=list(dom='t',scrollX=F,fixedHead=T,deferRender=T,
+                                                scrollY=500,scroller=T,autoWidth = TRUE,
+                                                columnDefs=list(list(width="15px",targets="_all")),
+                                                fixedColumns = TRUE,
+                       initComplete = JS(
+    "function(settings, json) {",
+    "$('body').css({'font-family': 'Arial'});",
+    "}")
+                                                ))%>% 
+  formatRound(c("Deaths","Eliminations","Final Blows","Ultimates Earned","K/D"),2)%>%
+  formatCurrency(ifelse(heroes %in% healer_heroes,c("Hero Damage","Healing"),"Hero Damage"),currency="",digits=0)
 ```
 
 Row {data-height=450}

@@ -123,8 +123,11 @@ names(filter_stats_plot) <- c("ID","Player","Team","Hero","Rank","Stats_name","V
 
 ```{r render subpages, include=FALSE}
 # Get all unique product groups for the subpages
-played_heroes_list <- unique(na.omit(filter_stats$hero_name))
-#played_heroes_list <- c("winston","reinhardt","brigitte")
+played_heroes_list <- filter_stats[,.N,by=hero_name][N>6,hero_name]
+tank_heroes<- played_heroes_list[played_heroes_list %in% c("winston","reinhardt","wreckingball","zarya","dva","roadhog","orisa")]
+healer_heroes<- played_heroes_list[played_heroes_list %in% c("ana","lucio","zenyatta","mercy","brigitte","moira")]
+dps_heroes <- played_heroes_list[!played_heroes_list %in% c(tank_heroes,healer_heroes)]
+
 # Create variable which stores all subpages outputs
 out = NULL
 
@@ -136,14 +139,14 @@ subpage_env <- new.env()
 
 for (hr in played_heroes_list) {
   # Filter data for product group 
-  sub <- SharedData$new(filter_stats_plot[Hero==hr,],key="Player",group="hero_stats_subset")
-  
-  sub_DT <- SharedData$new(filter_stats_plot[Hero==hr,][,.("Player"=Player,"Stats"=Stats_name_formatted,"Value"=round(Value,2))][,Rank:=frankv(Value,order=-1,ties.method = "dense"),by=Stats],key="Player",group="hero_stats_subset")
+  sub <- SharedData$new(filter_stats_plot[Hero==hr,],~Player,group="hero_stats_subset")
   
   # Assign filtered data and product group to subpage_env 
   assign("subpage_data", sub, subpage_env)
+  assign("tank_heroes", tank_heroes, subpage_env)
+  assign("healer_heroes", healer_heroes, subpage_env)
+  assign("dps_heroes", dps_heroes, subpage_env)
   assign("heroes", hr, subpage_env)
-  assign("sub_DT", sub_DT, subpage_env)
   # Knit subpage.RMD using the subpage_env and add result to out vector
   out = c(out, knitr::knit_child('dashboard_sub.RMD', envir = subpage_env))
 }
