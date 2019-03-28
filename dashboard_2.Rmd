@@ -1,0 +1,263 @@
+---
+title: "OWL Hero Statistics Dashboard"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+library(jsonlite)
+library(data.table)
+library(dplyr)
+library(tidyr)
+root = "https://api.overwatchleague.com"
+node = "player"
+expand = "stats"
+path =  paste(paste(root,node,sep = "/"),
+              ifelse(is.null(expand), NULL,paste0("expand=",expand)),sep="?")
+flatJSON <- fromJSON(path,simplifyDataFrame=T,flatten=T)
+tableJSON <- data.table(flatJSON)
+
+### Trasfer dataset to flat and long file #############
+
+get_heroes_stats <- function(x){
+  if(!is.null(x)) unnest(x,stats) %>% select(-id) %>%
+    spread(key=name1,value=value,fill=NA)
+}
+
+merge_player_info <- function(id){
+  vars = c("id","name","homeLocation","familyName","givenName","nationality","teams",
+           "attributes.role","stats.tournament_type","stats.season_id")
+  get_heroes_stats(tableJSON)
+}
+
+
+tableJSON$row <- 1:nrow(tableJSON)
+table_hero <- tableJSON[,rbindlist(stats.heroes, fill = T, id = "row")
+                        ][,`:=`(player_name=tableJSON$name[row],hero_row =.I)]
+
+
+# Get hero stats table
+table_hero_stats <- table_hero[,rbindlist(stats, fill = T, id = "hero_row")
+                               ][,`:=`(id=NULL,
+                                       stats_10m = ifelse(str_detect(name,"_1m"),value*10,value))][]
+
+### Get team info table
+table_team <- tableJSON[,rbindlist(teams, fill = T, id = "row")][,player_name:=tableJSON$name[row]]
+
+### Get player name plus hero stats long file
+setnames(table_hero,"name","hero_name")
+setkey(table_hero,hero_row)
+setkey(table_hero_stats,hero_row)
+table1 <- table_hero_stats[table_hero,]
+
+### Get hero player info file, uid by player_name
+vars <- c("id","player_name","homeLocation","familyName","givenName","nationality","teams",
+          "attributes.role","stats.tournament_type","stats.season_id")
+table2 <- tableJSON[,c("player_name"):=name][,vars,with=F]
+
+
+### Merge to get player info and hero info long file
+setkey(table2,player_name)
+setkey(table1,player_name)
+table3 <- table1[table2,]
+
+### Merge with team table to get player info, team info, and hero stats long file
+table_stats_by_player_hero <- table3[table_team[,.(player_name,team.id,team.name,team.primaryColor,team.abbreviatedName)],]
+
+
+
+### Prepare barchart dataset #############
+### Default parameters
+played_heroes = unique(na.omit(table_stats_by_player_hero$hero_name))
+suppor_heroes = c("brigitte","moira","zenyatta","ana","lucio","mercy")
+stats_vars = str_subset(unique(table_stats_by_player_hero$name),"_per_1m")
+play_time_min = 3600 #seconds
+
+### filter minimum play time
+setkey(table_stats_by_player_hero,player_name,hero_name)
+filter_stats <- table_stats_by_player_hero[
+  table_stats_by_player_hero[name=="time_played_total" & stats_10m>play_time_min, player_name,keyby=.(player_name,hero_name)],
+  ][name %in% stats_vars,]
+
+### calculate player rank for barchart sorting, by stats name
+filter_stats <- filter_stats[,rank:=paste(name,sprintf("%03i", frankv(stats_10m,order=-1,ties.method = "first"))),by=name]
+setorder(filter_stats,name,rank)
+
+### set up color parameters
+table_team_color <- unique(filter_stats[,c("team.abbreviatedName","team.primaryColor")])
+color_str <- paste0("#",table_team_color$team.primaryColor)
+names(color_str) <-table_team_color$team.abbreviatedName
+
+#ytitle <- stri_trans_totitle(gsub("_"," ",str_remove(stats_var,"_avg_per_1m")))
+
+filter_stats_plot<- filter_stats[,c("id","player_name","team.abbreviatedName","hero_name","rank","name","stats_10m")]
+names(filter_stats_plot) <- c("ID","Player","Team","Hero","Rank","Stats_name","Value")
+
+```
+
+Winston
+=======================================================================
+
+Column {data-width=650}
+-----------------------------------------------------------------------
+
+###  Stats Bar Chart
+
+```{r}
+sp1<-get_subplot("winston",play_time_min=3600)
+sp1
+```
+
+Column {data-width=350}
+-----------------------------------------------------------------------
+
+### Chart B
+
+```{r}
+
+```
+
+### Chart C
+
+```{r}
+
+```
+
+Zarya
+=======================================================================
+
+Column {data-width=650}
+-----------------------------------------------------------------------
+
+###  Stats Bar Chart
+
+```{r}
+sp1<-get_subplot("zarya",play_time_min=3600)
+sp1
+```
+
+Column {data-width=350}
+-----------------------------------------------------------------------
+
+### Chart B
+
+```{r}
+
+```
+
+### Chart C
+
+```{r}
+
+```
+
+Reinhardt
+=======================================================================
+
+Column {data-width=650}
+-----------------------------------------------------------------------
+
+###  Stats Bar Chart
+
+```{r}
+sp1<-get_subplot("reinhardt",play_time_min=3600)
+sp1
+```
+
+Column {data-width=350}
+-----------------------------------------------------------------------
+
+### Chart B
+
+```{r}
+
+```
+
+### Chart C
+
+```{r}
+
+```
+Zenyatta
+=======================================================================
+
+Column {data-width=650}
+-----------------------------------------------------------------------
+
+###  Stats Bar Chart
+
+```{r}
+sp1<-get_subplot("zenyatta",play_time_min=3600)
+sp1
+```
+
+Column {data-width=350}
+-----------------------------------------------------------------------
+
+### Chart B
+
+```{r}
+
+```
+
+### Chart C
+
+```{r}
+
+```
+Lucio
+=======================================================================
+
+Column {data-width=650}
+-----------------------------------------------------------------------
+
+###  Stats Bar Chart
+
+```{r}
+sp1<-get_subplot("lucio",play_time_min=3600)
+sp1
+```
+
+Column {data-width=350}
+-----------------------------------------------------------------------
+
+### Chart B
+
+```{r}
+
+```
+
+### Chart C
+
+```{r}
+
+```
+Brigitte
+=======================================================================
+
+Column {data-width=650}
+-----------------------------------------------------------------------
+
+###  Stats Bar Chart
+
+```{r}
+sp1<-get_subplot("brigitte",play_time_min=3600)
+sp1
+```
+
+Column {data-width=350}
+-----------------------------------------------------------------------
+
+### Chart B
+
+```{r}
+
+```
+
+### Chart C
+
+```{r}
+
+```

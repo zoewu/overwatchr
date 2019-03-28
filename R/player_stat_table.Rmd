@@ -1,7 +1,7 @@
 ---
-title: "Overwatch Player Statistics - Inauguration Season"
+title: "Overwatch Player Statistics - 2019 Season"
 author: "Zoe"
-date: "September 5, 2018"
+date: "Februrary 26, 2019"
 output: html_document
 ---
 
@@ -11,6 +11,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 library(jsonlite)
 library(DT)
+
 ```
 
 ## Player Statistics Table
@@ -27,5 +28,5 @@ data[,-c(1,2)] %>%
             filter="top")%>%
   formatRound(columns=names(data)[-c(1,2)], digits=0)
 
-```
 
+```
